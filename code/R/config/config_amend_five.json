@@ -1,0 +1,23 @@
+{
+  "model_parameters": {
+    "start_date": "2009-01-01",
+    "end_date": "2024-03-31",
+    "voi": ["cred_hs_yoy", "cred_cs_yoy"],
+    "label_file": "code/R/config/variable_labels.json",
+    "capital_variable": "exc_cap_2_yoy",
+    "gov_spread": "sa_us_10yr",
+    "repo_rate": "bank_rate",
+    "car_var": "capital_index"
+  },
+  "plotting": {
+    "nrows": 5,
+    "line_width": 3,
+    "line_type": 1,
+    "font_family": "Aptos",
+    "font_size": 1.4,
+    "title_size": 1.4,
+    "opacity": 1,
+    "grid_opacity": 0.3,
+    "custom_colors": "palettetown::beldum"
+  }
+}

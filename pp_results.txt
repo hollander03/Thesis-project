@@ -1,0 +1,27 @@
+<table class="table" style="color: black; margin-left: auto; margin-right: auto;">
+<caption>PP Test Results</caption>
+ <thead>
+  <tr>
+   <th style="text-align:left;"> variable </th>
+   <th style="text-align:right;"> statistic </th>
+   <th style="text-align:right;"> p.value </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style="text-align:left;"> GDP Growth (YoY) </td>
+   <td style="text-align:right;"> -28.907 </td>
+   <td style="text-align:right;"> 0.010 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Inflation Rate </td>
+   <td style="text-align:right;"> -14.534 </td>
+   <td style="text-align:right;"> 0.284 </td>
+  </tr>
+  <tr>
+   <td style="text-align:left;"> Repo Rate </td>
+   <td style="text-align:right;"> -11.978 </td>
+   <td style="text-align:right;"> 0.430 </td>
+  </tr>
+</tbody>
+</table>

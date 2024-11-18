@@ -1,0 +1,424 @@
+---
+output:
+  md_document:
+    variant: markdown_github
+---
+
+# Identification of Monetary Policy shocks in South Africa
+
+This Repo serves as the workbook for my Master Thesis. The folder will also hold all of my figures, tables and data that will be used. 
+
+
+```{r}
+
+rm(list = ls()) # Clean your environment:
+gc() # garbage collection - It can be useful to call gc after a large object has been removed, as this may prompt R to return memory to the operating system.
+
+
+```
+
+# Libraries
+```{r}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  readxl, bsvars, bsvarSIGNs, tseries, readr, dplyr, tidyr,
+  ggplot2, lubridate, zoo, extrafont, janitor, stringr, paletteer, jsonlite, 
+  vars, kableExtra, knitr, broom, tseries, urca, xtable
+)
+
+# Load fonts and source functions
+loadfonts()
+source_files <- list.files("code/R/functions", full.names = TRUE)
+invisible(sapply(source_files, source))
+
+```
+
+# Load and prepare Data
+
+This is still from Dawies initial data so this will change once I include more data and then I can also change this as well.
+```{r}
+model_data <- load("~/Desktop/School/Masters/MThesis/Narrative sign restrictions/Master Thesis/Thesis project/code/R/models/model_data_1.rda")
+
+
+
+```
+
+# Model selection
+Again this will change as I better understand what is going on but for now I am just bringing in what I know I need and and can use. More technical stuff can be found in code/R/Dawie/04_bsvar_basic.R
+
+
+## Model configuration
+```{r}
+# Load Configuration
+config <- load_config("code/R/config/config_amend.json")
+model_params <- config$model_params
+plotting_params <- config$plotting
+```
+
+## Access model parameters
+```{r}
+# Access model parameters
+model_num <- 1 # Not in the config file
+start_date <- model_params$start_date
+end_date <- model_params$end_date
+voi <- model_params$voi
+label_file <- model_params$label_file
+capital <- model_params$capital_variable
+gov_spread <- model_params$gov_spread
+repo <- model_params$repo_rate
+car_var <- model_params$car_var
+```
+
+## Define shocks
+```{r}
+# # Define shocks
+# shocks <- define_shocks(model_num, car_var, capital, repo)
+shocks1 <-c("bank_rate")
+```
+
+## Extract data and plot variables
+```{r}
+data <- model_data$data
+
+data_test<- model_data$data
+
+data_tbl <- as_tibble(data_test) %>% 
+    dplyr::select("gdp_yoy", "inflation", "bank_rate")
+
+data_mat <- as.matrix(data_tbl)
+
+# Assuming start_date is in the format "YYYY-MM-DD"
+start_year <- as.numeric(format(as.Date(start_date), "%Y"))
+start_month <- as.numeric(format(as.Date(start_date), "%m"))
+
+# Create the time series
+data_ts <- ts(data_mat, start = c(start_year, start_month), frequency = 12)
+
+
+custom_labels <-model_data$custom_labels
+
+custom_labels1 <- c("GDP Growth (YoY)", "Inflation Rate", "Repo Rate")
+
+ # Use the new get_labels_from_data function to read labels from the JSON file
+  custom_labels1 <- get_labels_from_data('/Users/wesleywilliams/Desktop/School/Masters/MThesis/Narrative sign restrictions/Master Thesis/Thesis project/code/R/config/variable_labels_amend.json')
+  
+  # Ensure the labels are in the same order as the columns in data
+  ordered_labels1 <- custom_labels1[match(colnames(data_ts), names(custom_labels1))]
+```
+
+```{r}
+# plot_model_series(data, custom_labels, plotting_params)
+
+plot_model_series(data_ts, ordered_labels1, plotting_params)
+
+```
+# Descriptive stats and tests
+
+## Stationarity tests 
+This has implications on the prior used. 
+```{r}
+
+
+# Initialize data frames for storing test results
+adf_results <- data.frame(variable = character(), statistic = numeric(), p.value = numeric(), stringsAsFactors = FALSE)
+pp_results <- data.frame(variable = character(), statistic = numeric(), p.value = numeric(), stringsAsFactors = FALSE)
+
+# Loop over each numeric column in data_tbl and perform ADF and PP tests
+for (col in names(data_tbl)) {
+  if (is.numeric(data_tbl[[col]])) {  # Check if the column is numeric
+    label <- ifelse(col %in% names(custom_labels1), custom_labels1[col], col)  # Get custom label or use column name
+    
+    # Run ADF test and format results
+    adf_res <- tidy(adf.test(data_tbl[[col]], alternative = "stationary"))
+    adf_res <- adf_res[, c("statistic", "p.value")]  # Select relevant columns
+    adf_res$variable <- label  # Add custom label to the results
+    adf_results <- rbind(adf_results, adf_res)
+    
+    # Run PP test and format results
+    pp_res <- tidy(pp.test(data_tbl[[col]], alternative = "stationary"))
+    pp_res <- pp_res[, c("statistic", "p.value")]  # Select relevant columns
+    pp_res$variable <- label  # Add custom label to the results
+    pp_results <- rbind(pp_results, pp_res)
+  }
+}
+
+# Rearrange columns so that the variable is the first column
+adf_results <- adf_results[, c("variable", "statistic", "p.value")]
+pp_results <- pp_results[, c("variable", "statistic", "p.value")]
+
+# Create and format tables
+adf_table <- knitr::kable(adf_results, caption = "ADF Test Results", format = "markdown", digits = 3) %>%
+  kable_styling()
+pp_table <- knitr::kable(pp_results, caption = "PP Test Results", format = "markdown", digits = 3) %>%
+  kable_styling()
+
+# Save tables to text files
+adf_table
+pp_table
+```
+
+## Ljung-Box Tests
+```{r}
+VarUnrestict <- VAR(data_ts, p = 3, type = "both")
+# Extract residuals from VAR model
+resid <- residuals(VarUnrestict)
+
+# Perform Box-Pierce test
+Box.test(resid[,1],lag = 1, type = "Ljung-Box")
+Box.test(resid[,2],lag = 1, type = "Ljung-Box")
+Box.test(resid[,3],lag = 1, type = "Ljung-Box")
+
+
+Box.test(resid[,1],lag = 2, type = "Ljung-Box")
+Box.test(resid[,2],lag = 2, type = "Ljung-Box")
+Box.test(resid[,3],lag = 2, type = "Ljung-Box")
+
+
+Box.test(resid[,1],lag = 3, type = "Ljung-Box")
+Box.test(resid[,2],lag = 3, type = "Ljung-Box")
+Box.test(resid[,3],lag = 3, type = "Ljung-Box")
+
+
+Box.test(resid[,1],lag = 4, type = "Ljung-Box")
+Box.test(resid[,2],lag = 4, type = "Ljung-Box")
+Box.test(resid[,3],lag = 4, type = "Ljung-Box")
+
+
+```
+
+```{r}
+VarUnrestict1 <- VAR(data_ts, p = 1, type = "both")
+VarUnrestict2 <- VAR(data_ts, p = 2, type = "both")
+VarUnrestict3 <- VAR(data_ts, p = 3, type = "both")
+VarUnrestict4 <- VAR(data_ts, p = 4, type = "both")
+VarUnrestict5 <- VAR(data_ts, p = 5, type = "both")
+VarUnrestict6 <- VAR(data_ts, p = 6, type = "both")
+VarUnrestict7<- VAR(data_ts, p = 7, type = "both")
+VarUnrestict8 <- VAR(data_ts, p = 8, type = "both")
+VarUnrestict9 <- VAR(data_ts, p = 9, type = "both")
+VarUnrestict10 <- VAR(data_ts, p = 10, type = "both")
+VarUnrestict11<- VAR(data_ts, p = 11, type = "both")
+VarUnrestict12<- VAR(data_ts, p = 12, type = "both")
+#TSESTS
+AIC(VarUnrestict1)
+AIC(VarUnrestict2)
+AIC(VarUnrestict3)
+AIC(VarUnrestict4)
+AIC(VarUnrestict5)
+AIC(VarUnrestict6)
+AIC(VarUnrestict7)
+AIC(VarUnrestict8)
+AIC(VarUnrestict9)
+AIC(VarUnrestict10)
+AIC(VarUnrestict11)
+AIC(VarUnrestict12)
+
+BIC(VarUnrestict1)
+BIC(VarUnrestict2)
+BIC(VarUnrestict3)
+BIC(VarUnrestict4)
+BIC(VarUnrestict5)
+BIC(VarUnrestict6)
+BIC(VarUnrestict7)
+BIC(VarUnrestict8)
+BIC(VarUnrestict9)
+BIC(VarUnrestict10)
+BIC(VarUnrestict11)
+BIC(VarUnrestict12)
+```
+For the three variable VAR, tha AIC selects 11 lags, the BIC selects 8 lags. I will need to run this again when all of the variables are included. The literature seems to use 12 lagss, so that may be a good comparison as well. 8 lags will help with the time taken to run the models. Also come back to this to see if the fact that I am using a BVAR makes a difference when it comes to information criteria.
+
+# Model Setup BVAR
+```{r}
+set.seed(5555)
+
+# Restrictions 
+restrictions <- generate_restrictions(colnames(data_ts))
+
+# Build the B matrix with restrictions
+B <- build_B_matrix(colnames(data_ts), restrictions = NULL)
+
+model_params <- list(S_burn = 1e2, S = 1e5, p = 4)
+
+# Estimate the SVAR model
+post_custom <- specify_and_estimate(
+  data = data_ts,
+  p = model_params$p,
+  model_type = "basic",
+  B = B,
+  S_burn = model_params$S_burn,
+  S = model_params$S
+)
+
+
+voi <- c("gdp_yoy","inflation","bank_rate")
+
+
+B_hat <- matrix(as.numeric(B), nrow = 3, ncol = 3)
+
+normalise_posterior(post_custom, B_hat) # following the documentaton the draws 
+```
+# Results
+## IRFs
+Bands are 90% probability
+```{r}
+
+process_irfs(
+  model = post_custom,
+  data = data_ts,
+  custom_labels = custom_labels1,
+  shocks = shock,
+  save_results = FALSE
+)
+
+```
+## Historical Decompositions
+```{r}
+date_vector <- seq.Date(from = as.Date(start_date), by = "month", length.out = nrow(data_ts))
+
+process_hds(
+  model = post_custom,
+  data = data_ts,
+  custom_labels = custom_labels1,
+  decomp_vars = voi,  # List of variables
+  date_vector = date_vector,
+  save_results = FALSE  # Optionally save the results
+)
+```
+
+## Forecast Error Variance Decompositions
+```{r}
+process_fevds(
+  model = post_custom,
+  custom_labels = custom_labels1,
+  selected_variable = voi,
+  save_results = FALSE
+)
+
+```
+
+
+# Sign Restrictions
+## Uhlig
+We start with Uhlig's sign restrictions first. I then add the additional restrictions based on Arias et al (2018)
+
+
+
+
+```{r}
+# Define the sign_structural matrix with 1 (unrestricted) and 0 (zero restrictions)
+num_vars <- ncol(data_ts)
+sign_structural <- matrix(NA, nrow = ncol(data_ts), ncol = ncol(data_ts))  # Initialize with zeros (restrictions)
+
+# Restriction 1. The federal funds rate is the monetary policy instrument and it only reacts contemporaneously to output, prices, and commodity prices.
+
+# Restriction 2. The contemporaneous reaction of the federal funds rate to output and prices is positive.
+
+# Apply the unrestricted elements (set to 1) based on your matrix structure
+# 
+# sign_structural[1, 1 ] <- 1 
+# sign_structural[1, 3 ] <- 1 
+# sign_structural[2,1:3] <- 1 
+# sign_structural[3,3] <- 1 
+# 
+
+# Sign restrictions on impulse responses (sign_irf)
+# Important note, the location of the row does not matter. We are imposing a structure to the relationship between variables in the IRFs themselves.
+sign_irf <- matrix(NA, nrow = num_vars, ncol = num_vars)
+
+sign_irf[,3] <-c(NA, -1, 1)
+
+sign_irf <- array(sign_irf, dim = c(3, 3, 6)) # Restriction on impulse for first 5 time periods
+
+# Specify and estimate the model
+sign_spec <- specify_bsvarSIGN$new(
+  data = data_ts,
+  p = 12,
+  sign_structural = sign_structural,
+  sign_irf = sign_irf
+)
+
+model_sign_restricted <- estimate(sign_spec, S = 100000)
+
+model <- model_sign_restricted
+
+shock <- c( "bank_rate")
+
+# Process IRFs
+process_irfs(
+  model = model,
+  model_name = model_name,
+  data = data,
+  custom_labels = custom_labels1,
+  shocks = shock,
+  save_results = FALSE
+)
+```
+## Narrative sign restrictions
+```{r}
+# Define the sequence of monthly dates starting from the start date
+date_check <- seq.Date(from = as.Date("2009-01-01"), by = "month", length.out = nrow(data))
+
+# Define the target date
+target_date <- as.Date("2020-03-01")  # February 2020
+
+# Find the index of the target date in the sequence
+index <- which(date_check == target_date)
+
+# Print the result
+print(index)  # Should print 134
+
+# Narrative sign restriction: the shock is positive in Feb 2020
+sign_narrative <- list(
+    specify_narrative(start = index, periods = 1, type = "S", sign = -1, shock = 1),
+  specify_narrative(start = index, periods = 1, type = "B", sign = -1, shock = 1, var = 3)
+)
+
+# Specify and estimate the model
+narrative_spec <- specify_bsvarSIGN$new(
+  data = data_ts,
+  p = 12,
+  sign_narrative = sign_narrative,
+ sign_irf = sign_irf
+)
+
+model_narrative <- estimate(narrative_spec, S = 10000)
+
+model <- model_narrative
+
+# Define shock indices (can be indices or variable names)
+# here I want tht VOI at this stage and as I add variables then this can change
+
+# Process IRFs
+process_irfs(
+  model = model,
+  model_name = model_name,
+  data = data,
+  custom_labels = custom_labels1,
+  shocks =shocks,
+  save_results = FALSE
+)
+```
+
+```{r}
+process_fevds(
+  model = model_narrative,
+  custom_labels = custom_labels1,
+  selected_variable = voi,
+  save_results = FALSE
+)
+```
+
+```{r}
+date_vector <- seq.Date(from = as.Date(start_date), by = "month", length.out = nrow(data_ts))
+
+process_hds(
+  model = model_narrative,
+  data = data_ts,
+  custom_labels = custom_labels1,
+  decomp_vars = voi,  # List of variables
+  date_vector = date_vector,
+  save_results = FALSE  # Optionally save the results
+)
+```
+

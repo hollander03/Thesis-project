@@ -305,17 +305,18 @@ process_irfs(
 
 
 ## Historical Decompositions
+The historical variance decompositions are to memory intensive and thus my document will not knit if I keep it in so instead I have saved the images and source them.
 ```{r}
 date_vector <- seq.Date(from = as.Date(start_date1), by = "month", length.out = nrow(data_ts))
 
-process_hds(
-  model = post_custom,
-  data = data_ts,
-  custom_labels = custom_labels,
-  decomp_vars = voi,
-  date_vector = date_vector,
-  save_results = FALSE  # Optionally save the results
-)
+# process_hds(
+#   model = post_custom,
+#   data = data_ts,
+#   custom_labels = custom_labels,
+#   decomp_vars = voi,
+#   date_vector = date_vector,
+#   save_results = FALSE  # Optionally save the results
+# )
 ```
 
 ## Forecast Error Variance Decompositions
@@ -494,14 +495,14 @@ process_fevds(
 ```{r}
 date_vector <- seq.Date(from = as.Date(start_date1), by = "month", length.out = nrow(data_ts))
 
-process_hds(
-  model = model_narrative,
-  data = data_ts,
-  custom_labels = custom_labels,
-  decomp_vars = voi,  # List of variables
-  date_vector = date_vector,
-  save_results = FALSE  # Optionally save the results
-)
+# process_hds(
+#   model = model_narrative,
+#   data = data_ts,
+#   custom_labels = custom_labels,
+#   decomp_vars = voi,  # List of variables
+#   date_vector = date_vector,
+#   save_results = FALSE  # Optionally save the results
+# )
 ```
 # Post GFC sample
 ```{r}
@@ -711,7 +712,7 @@ n <- length(data_ts_gfc)
 
 end_covid_date <- as.Date("2021-12-01")  
 
-index_covid_end <- which(date_check == end_covid_date)
+index_covid_end <- which(date_check1 == end_covid_date)
 
 # Print the result
 print(index_covid_end)  

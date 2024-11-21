@@ -31,7 +31,7 @@ set_plot_layout <- function(nrow, ncol, mar.multi, oma.multi, font_family) {
 
 # Define the customized plot_ribbon function
 custom_plot_ribbon <- function(
-    draws, 
+    draws,
     probability = 0.9,
     col = "#ff69b4",
     ylim = NULL,
@@ -54,34 +54,34 @@ custom_plot_ribbon <- function(
     "Argument start_at must be an integer." = is.numeric(start_at) && start_at %% 1 == 0,
     "Argument add must be a logical value." = is.logical(add) & length(add) == 1
   )
-  
+
   mat_or_array_tmp <- length(dim(draws))
   K <- dim(draws)[1]
   S <- dim(draws)[2]
-  
+
   # Ensure draws is always an array with 3 dimensions
   if (mat_or_array_tmp == 2) {
     N <- 1
-    draws_tmp <- array(NA, c(K, S, 1)) 
+    draws_tmp <- array(NA, c(K, S, 1))
     draws_tmp[,,1] <- draws
     draws <- draws_tmp
   } else {
     N <- dim(draws)[3]
   }
-  
+
   # Compute median and quantiles for confidence intervals
   draws_median <- apply(draws, c(1, 3), stats::median)
   draws_lb <- apply(draws, c(1, 3), stats::quantile, probs = 0.5 * (1 - probability))
   draws_ub <- apply(draws, c(1, 3), stats::quantile, probs = 1 - 0.5 * (1 - probability))
-  
+
   if (is.null(ylim)) ylim <- range(draws_lb, draws_ub)
   if (is.null(ylab)) ylab <- ""
   if (is.null(xlab)) xlab <- ""
-  
+
   # Set colors with specified transparency
   col_ribbon <- get_color_with_alpha(col, ribbon_alpha)
   col_line <- get_color_with_alpha(col, line_alpha)
-  
+
   if (!add) {
     plot(
       x = start_at:(K - 1 + start_at),
@@ -97,7 +97,7 @@ custom_plot_ribbon <- function(
       ...
     )
   }
-  
+
   # Plot the ribbon and median line for each draw
   for (n in 1:N) {
     polygon(
@@ -131,7 +131,7 @@ plot_responses_to_shock <- function(
     layout = "grid",
     nrow = NULL,
     ncol = NULL,
-    mar.multi = c(1, 4.1, 2, 1.1),  
+    mar.multi = c(1, 4.1, 2, 1.1),
     oma.multi = c(5, 0, 5, 0),
     line_style = 1,
     line_width = 2,
@@ -144,15 +144,15 @@ plot_responses_to_shock <- function(
 ) {
   # Default to all shocks if no specific indices are provided
   shocks <- shocks %||% seq_len(dim(x)[2])
-  
+
   shock_names <- shock_names %||% colnames(y)
   variable_names <- variable_names %||% colnames(y)
-  
+
   cols <- cols %||% grDevices::rainbow(length(shocks))
   cols <- rep(cols, length.out = length(shocks))
-  
+
   main <- main %||% paste("Responses to Shocks:", paste(shock_names[shocks], collapse = ", "))
-  
+
   # Set up the layout based on the given parameters
   if (layout == "grid") {
     nrow <- nrow %||% length(shocks)
@@ -166,15 +166,15 @@ plot_responses_to_shock <- function(
   } else {
     stop("Invalid layout option. Choose from 'grid', 'stacked', or 'side-by-side'.")
   }
-  
+
   # Set up layout
   oldpar <- set_plot_layout(nrow, ncol, mar.multi, oma.multi, font_family)
   on.exit(par(oldpar))
-  
+
   # Loop over shock indices
   for (i in seq_along(shocks)) {
     shock_index <- shocks[i]
-    
+
     for (n in 1:dim(x)[1]) {
       custom_plot_ribbon(
         draws = x[n, shock_index, ,],
@@ -184,21 +184,21 @@ plot_responses_to_shock <- function(
         line_alpha = line_alpha,
         lty = line_style,
         lwd = line_width,
-        ylab = "",  
+        ylab = "",
         xlab = if (n == dim(x)[1]) xlab else "",
         start_at = 0,
         bty = "l",
         axes = TRUE,
         ...
       )
-      
+
       draw_plot_annotations(n, axis_font_size, variable_names, add_title = TRUE)
     }
   }
-  
+
   # Main title for the entire plot
   mtext(main, side = 3, line = 2, outer = TRUE, cex = title_font_size / 10)
-  
+
   invisible(x)
 }
 
@@ -222,7 +222,7 @@ plot_series <- function(df_subset, y_range, xlab, ylab, main_title, color, line_
     bty = "l",
     font.main = 1
   )
-  
+
   # Add custom grid with semi-transparent lines
   add_custom_grid(df_subset$Value, df_subset$Time, grid_opacity)
 }
@@ -239,46 +239,46 @@ add_custom_grid <- function(value_range, time_range, grid_opacity) {
 
 # Main function: plot_all_series
 plot_all_series <- function(
-    data, 
-    custom_labels = NULL, 
-    nrows = 3, 
+    data,
+    custom_labels = NULL,
+    nrows = 3,
     line_width = 2,
-    line_type = 1, 
-    font_family = "sans", 
+    line_type = 1,
+    font_family = "sans",
     font_size = 1,
-    title_size = 1, 
-    xlab = "Time", 
+    title_size = 1,
+    xlab = "Time",
     ylab = "Value",
     colors = NULL,  # Option to pass custom color palette
-    opacity = 1, 
+    opacity = 1,
     grid_opacity = 0.5,
     exclude_colors = c("yellow", "lightgreen")  # Colors to exclude from the default palette
 ) {
-  
+
   # Ensure custom labels are provided; if not, use default column names
   if (is.null(custom_labels)) {
     custom_labels <- colnames(data)
   }
-  
+
   # Extract time index from the time series object
   time_index <- time(data)
-  
+
   # Create a data frame for plotting
   df <- as.data.frame(data)
   df$Time <- time_index
-  
+
   # Reshape data for plotting
   df_long <- tidyr::pivot_longer(df, cols = -Time, names_to = "Series", values_to = "Value")
-  
+
   # Map custom labels to the Series variable
   df_long$Series <- factor(df_long$Series, levels = colnames(data), labels = custom_labels)
-  
+
   # Determine number of series and set up plot layout dynamically
   n_series <- length(unique(df_long$Series))
   ncols <- ceiling(n_series / nrows)
   par(mfrow = c(nrows, ncols), mar = c(3, 3, 2, 1), family = font_family,
       cex.main = title_size, cex.lab = font_size, cex.axis = font_size)
-  
+
   # Set colors if not provided
   if (is.null(colors)) {
     # Generate default colors excluding specified ones
@@ -286,18 +286,18 @@ plot_all_series <- function(
     filtered_colors <- available_colors[!available_colors %in% exclude_colors]
     colors <- grDevices::rainbow(n_series, start = 0, end = 0.85)  # Customize the color range
   }
-  
+
   # Ensure the number of colors matches the number of series
   colors <- rep(colors, length.out = n_series)
-  
+
   # Set up individual plots per series
   for (i in unique(df_long$Series)) {
     # Filter data for the current series
     df_subset <- df_long[df_long$Series == i, ]
-    
+
     # Calculate y-axis limits for the current series
     y_range <- range(df_subset$Value, na.rm = TRUE)
-    
+
     # Plot each series using the helper function
     plot_series(
       df_subset = df_subset,
@@ -311,7 +311,7 @@ plot_all_series <- function(
       grid_opacity = grid_opacity
     )
   }
-  
+
   # Reset plotting parameters
   par(mfrow = c(1, 1), family = "", cex.main = 1, cex.lab = 1, cex.axis = 1)
 }
@@ -320,11 +320,11 @@ plot_all_series <- function(
 
 #' Plots fitted values of specified dependent variables with the option to overlay multiple models
 #'
-#' @description Plots fitted values of specified dependent variables including their 
+#' @description Plots fitted values of specified dependent variables including their
 #' median and percentiles, with each variable plotted in its own panel and dates on the x-axis.
 #' The function incorporates customizable aesthetics such as font sizes, colors, and gridlines, and allows
 #' overlaying predictions from multiple models.
-#' 
+#'
 #' @param x an object of class Forecasts obtained using the \code{forecast()} function containing posterior draws of fitted values of dependent variables.
 #' @param x_overlay an optional object of class Forecasts for overlaying predictions from another model.
 #' @param variables a numeric vector of indices or a character vector of names specifying which variables to plot. Defaults to all variables.
@@ -352,7 +352,7 @@ plot_all_series <- function(
 #' @param ribbon_alpha the transparency level of the ribbon (shaded area).
 #' @param grid_opacity the transparency level of the grid lines.
 #' @param ... additional arguments affecting the plot produced.
-#' 
+#'
 #' @export
 plot_forecast <- function(
     x,
@@ -385,7 +385,7 @@ plot_forecast <- function(
   get_color_with_alpha <- function(col, alpha) {
     adjustcolor(col, alpha.f = alpha)
   }
-  
+
   # Helper function to add custom gridlines
   add_custom_grid <- function(value_range, date_range, grid_opacity) {
     abline(
@@ -395,27 +395,27 @@ plot_forecast <- function(
       lty = "dotted"
     )
   }
-  
+
   # Validate input parameters
   if (!is.null(data_in_plot)) {
-    stopifnot("Argument data_in_plot must be a value within range (0,1]" = 
+    stopifnot("Argument data_in_plot must be a value within range (0,1]" =
                 is.numeric(data_in_plot) & data_in_plot > 0 & data_in_plot <= 1)
   }
-  
+
   fore = x$forecasts
   Y    = x$Y
-  
+
   N    = dim(fore)[1]
   H    = dim(fore)[2]
   T    = dim(Y)[2]
-  
+
   # If x_overlay is provided, extract the forecasts for the overlay
   if (!is.null(x_overlay)) {
     fore_overlay = x_overlay$forecasts
-    stopifnot("x_overlay must have the same number of variables and history length as x." = 
+    stopifnot("x_overlay must have the same number of variables and history length as x." =
                 all(dim(fore_overlay)[1] == N & dim(fore_overlay)[2] == H & dim(fore_overlay)[3] == dim(fore)[3]))
   }
-  
+
   # Handle variable_names argument
   if (!is.null(variable_names)) {
     if (length(variable_names) != N) {
@@ -426,7 +426,7 @@ plot_forecast <- function(
   } else {
     variable_names <- paste("Variable", 1:N)
   }
-  
+
   # Handle variables argument
   if (is.null(variables)) {
     variables_to_plot <- 1:N
@@ -442,15 +442,15 @@ plot_forecast <- function(
       stop("variables argument must be numeric indices or variable names.")
     }
   }
-  
+
   num_vars <- length(variables_to_plot)
-  
+
   # Generate colors with transparency
   col_ribbon <- get_color_with_alpha(col, ribbon_alpha)
   col_line <- get_color_with_alpha(col, 1)
   col_ribbon_overlay <- get_color_with_alpha(col_overlay, ribbon_alpha)
   col_line_overlay <- get_color_with_alpha(col_overlay, 1)
-  
+
   # Determine the number of periods to include in the plot
   if (!is.null(history_length)) {
     # Convert history_length (in years) to number of periods
@@ -462,13 +462,13 @@ plot_forecast <- function(
     T_in_plot <- floor(data_in_plot * T)
     if (T_in_plot < 1) T_in_plot <- 1
   }
-  
+
   obs_in_plot = (T - T_in_plot + 1):T
   seq_in_plot = 1:T_in_plot
   for_in_plot = (T_in_plot + 1):(T_in_plot + H)
-  
+
   total_periods <- T_in_plot + H
-  
+
   # Create date sequence
   if (!is.null(date_vector)) {
     if (length(date_vector) != T) {
@@ -486,7 +486,7 @@ plot_forecast <- function(
   dates_fore <- seq.Date(from = dates_hist[length(dates_hist)] + 1, by = paste0(12 / frequency, " months"), length.out = H)
   # Combine dates
   dates_all <- c(dates_hist, dates_fore)
-  
+
   # Set up plotting area with multiple panels
   oldpar <- graphics::par(
     mfrow = c(num_vars, 1),
@@ -497,27 +497,27 @@ plot_forecast <- function(
     cex.axis = axis_font_size / 10
   )
   on.exit(graphics::par(oldpar))
-  
+
   for (i in seq_along(variables_to_plot)) {
     n <- variables_to_plot[i]
     # Compute forecasts characteristics
     fore_median <- apply(fore[n,,], 1, stats::median)
     fore_lb     <- apply(fore[n,,], 1, stats::quantile, probs = 0.5 * (1 - probability))
     fore_ub     <- apply(fore[n,,], 1, stats::quantile, probs = 1 - 0.5 * (1 - probability))
-    
+
     # For overlay, compute forecast characteristics (if available)
     if (!is.null(x_overlay)) {
       fore_median_overlay <- apply(fore_overlay[n,,], 1, stats::median)
       fore_lb_overlay     <- apply(fore_overlay[n,,], 1, stats::quantile, probs = 0.5 * (1 - probability))
       fore_ub_overlay     <- apply(fore_overlay[n,,], 1, stats::quantile, probs = 1 - 0.5 * (1 - probability))
     }
-    
+
     # Determine y-range
     y_range <- range(fore_lb, fore_ub, Y[n, obs_in_plot], na.rm = TRUE)
     if (!is.null(x_overlay)) {
       y_range <- range(y_range, fore_lb_overlay, fore_ub_overlay, na.rm = TRUE)
     }
-    
+
     # Plot the variable forecast with axes = TRUE but disable x-axis ticks (xaxt = "n")
     plot(
       x = dates_all,
@@ -532,10 +532,10 @@ plot_forecast <- function(
       xaxt = "n",   # Disable default x-axis ticks
       ...
     )
-    
+
     # Add custom gridlines
     add_custom_grid(c(Y[n, obs_in_plot], fore_median, fore_lb, fore_ub), dates_all, grid_opacity)
-    
+
     # Draw ribbon for main forecast
     polygon(
       x = c(dates_all[T_in_plot:(T_in_plot + H)], rev(dates_all[T_in_plot:(T_in_plot + H)])),
@@ -543,7 +543,7 @@ plot_forecast <- function(
       col = col_ribbon,
       border = NA
     )
-    
+
     # Plot forecast median line for main forecast
     lines(
       x = dates_all,
@@ -552,7 +552,7 @@ plot_forecast <- function(
       lwd = line_width,
       col = col_line
     )
-    
+
     # Plot historical data
     lines(
       x = dates_all[1:T_in_plot],
@@ -561,7 +561,7 @@ plot_forecast <- function(
       lwd = line_width,
       col = col_line
     )
-    
+
     # If overlay data is available, plot it
     if (!is.null(x_overlay)) {
       # Draw ribbon for overlay forecast
@@ -571,7 +571,7 @@ plot_forecast <- function(
         col = col_ribbon_overlay,
         border = NA
       )
-      
+
       # Plot forecast median line for overlay forecast
       lines(
         x = dates_all,
@@ -581,19 +581,19 @@ plot_forecast <- function(
         col = col_line_overlay
       )
     }
-    
+
     # Manually add the x-axis with yearly ticks
     if (i == num_vars) {  # Only add the x-axis for the last plot
       axis.Date(1, at = seq(dates_all[1], dates_all[length(dates_all)], by = "year"), format = "%Y", cex.axis = axis_font_size / 10)
     }
-    
+
     # Add variable name as title
     title(variable_names[n], line = 0.5, cex.main = title_font_size / 10, font.main = 1)
-    
+
     # Add a horizontal line at y = 0
     abline(h = 0)
   }
-  
+
   # Add the main title for the entire plot
   mtext(
     main,
@@ -602,7 +602,7 @@ plot_forecast <- function(
     outer = TRUE,
     cex = title_font_size / 10
   )
-  
+
   # Add the x-axis label (only displayed once across all plots)
   mtext(
     xlab,
@@ -611,7 +611,7 @@ plot_forecast <- function(
     outer = TRUE,
     cex = axis_font_size / 10
   )
-  
+
   invisible(x)
 }
 
@@ -619,7 +619,7 @@ plot_forecast <- function(
 #'
 #' @description This function plots the posterior means of the historical decompositions.
 #' It allows custom colors, titles, axis labels, and multiple customization options for fine-tuning the plot.
-#' 
+#'
 #' @param x an object of class PosteriorHD obtained using the \code{compute_historical_decompositions()} function containing posterior draws of historical decompositions.
 #' @param cols a vector of colors to use for different shocks. If not provided, default colors will be used.
 #' @param main an alternative main title for the plot. Defaults to "Historical Decompositions".
@@ -627,9 +627,9 @@ plot_forecast <- function(
 #' @param mar.multi the default \code{mar} argument setting in \code{graphics::par}. Modify with care.
 #' @param oma.multi the default \code{oma} argument setting in \code{graphics::par}. Modify with care.
 #' @param ... additional arguments affecting the plot produced.
-#' 
+#'
 #' @method plot PosteriorHD
-#' 
+#'
 #' @seealso \code{\link{compute_historical_decompositions}}
 #'
 #' @export
@@ -640,7 +640,7 @@ plot_historical_decomposition <- function(
     main = "Historical Decompositions",
     xlab = "Time",
     ylab = "Response",
-    mar.multi = c(1, 4.1, 2, 1.1),  
+    mar.multi = c(1, 4.1, 2, 1.1),
     oma.multi = c(5, 0, 5, 0),
     line_width = 2,  # Customizable line width
     line_type = 1,   # Customizable line type
@@ -653,37 +653,37 @@ plot_historical_decomposition <- function(
     legend_labels = NULL, # Labels for the legend corresponding to shocks
     ...
 ) {
-  
+
   # Compute mean historical decompositions from the posterior draws
   hd_mean <- apply(x, 1:3, mean)
   N <- dim(hd_mean)[1]  # Number of variables
   T <- dim(hd_mean)[3]  # Time periods
-  
+
   # Set default for selected decompositions (plot all if not specified)
   if (is.null(selected_decompositions)) {
     selected_decompositions <- 1:N
   }
-  
+
   # Ensure valid selection of decompositions
   if (!all(selected_decompositions %in% 1:N)) {
     stop("Selected decompositions must be valid indices within the decomposition list.")
   }
-  
+
   # Set default colors if none are provided
   if (is.null(cols)) {
     color_palette <- grDevices::colorRampPalette(c("#ff69b4", "#ffd700"))
     cols <- color_palette(N)
   }
-  
+
   # Set default legend labels if none are provided
   if (is.null(legend_labels)) {
     legend_labels <- paste("Shock", 1:N)  # Default labels as "Shock 1", "Shock 2", etc.
   }
-  
+
   # Compute cumulative contributions for historical decompositions
   y_hat <- apply(hd_mean, c(1, 3), sum)
   ul <- list()
-  
+
   for (n in 1:N) {
     ul[[n]] <- list()
     for (i in 1:N) {
@@ -694,7 +694,7 @@ plot_historical_decomposition <- function(
       ul[[n]][[i]][2, !which_negative] <- cum_mean[!which_negative]
     }
   }
-  
+
   # Set up plotting parameters
   oldpar <- graphics::par(
     mfrow = c(length(selected_decompositions), 1),  # Adjust number of plots dynamically
@@ -703,24 +703,24 @@ plot_historical_decomposition <- function(
     family = font_family  # Apply custom font family
   )
   on.exit(graphics::par(oldpar))
-  
+
   # Loop over each selected decomposition to plot it
   # Loop over each selected decomposition to plot it
   for (n in selected_decompositions) {
-    
+
     # Initialize cumulative sums for calculating the total range of the stacked plots
     cumulative_upper <- rep(0, T)
     cumulative_lower <- rep(0, T)
-    
+
     # Calculate the cumulative sum for upper and lower bounds to determine the y-axis limits
     for (i in 1:N) {
       cumulative_upper <- cumulative_upper + ul[[n]][[i]][2, 1:T]
       cumulative_lower <- cumulative_lower + ul[[n]][[i]][1, 1:T]
     }
-    
+
     # Determine the range of y-values (taking the minimum and maximum of cumulative sums)
     range_n <- range(c(cumulative_lower, cumulative_upper))
-    
+
     # Plot the historical decomposition for the selected variable with the adjusted y-limits
     graphics::plot(
       x = 1:T,
@@ -733,24 +733,24 @@ plot_historical_decomposition <- function(
       bty = "n",
       axes = FALSE
     )
-    
+
     # Add gridlines
     abline(
       h = pretty(range(range_n)),
       col = adjustcolor("gray", alpha.f = grid_opacity),
       lty = "dotted"
     )
-    
+
     # Initialize cumulative sum for stacking again for actual plotting
     cumulative_upper <- rep(0, T)
     cumulative_lower <- rep(0, T)
-    
+
     # Plot stacked ribbons for the decompositions
     for (i in 1:N) {
       # Define the upper and lower bounds for each shock's contribution
       upper <- cumulative_upper + ul[[n]][[i]][2, 1:T]
       lower <- cumulative_lower + ul[[n]][[i]][1, 1:T]
-      
+
       # Draw the polygon for the current shock, stacked on top of the previous ones
       graphics::polygon(
         x = c(1:T, rev(1:T)),
@@ -758,31 +758,31 @@ plot_historical_decomposition <- function(
         col = adjustcolor(cols[i], alpha.f = ribbon_alpha),  # Ribbon color for shocks with transparency
         border = adjustcolor(cols[i], alpha.f = line_alpha)  # Line border with transparency
       )
-      
+
       # Update the cumulative sums for stacking
       cumulative_upper <- upper
       cumulative_lower <- lower
     }
-    
+
     # Add horizontal line at zero
     graphics::abline(h = 0, lty = line_type, lwd = 1, col = "black")
-    
+
     # Add axes
     graphics::axis(1, cex.axis = axis_font_size / 10)  # Custom axis font size
     graphics::axis(2, cex.axis = axis_font_size / 10)
   }
-  
-  
+
+
   # Add main title
   graphics::mtext(main, side = 3, line = 2, outer = TRUE, cex = title_font_size / 10)  # Custom title size
-  
+
   # Add X-axis label only once
   graphics::mtext(xlab, side = 1, line = 3, outer = TRUE, cex = axis_font_size / 10)
-  
+
   # Add the legend at the bottom, outside the plot
   graphics::par(mar = c(0, 0, 0, 0), oma = c(4, 0, 0, 0))  # Set margins for the legend
   graphics::legend(
-    "bottom", 
+    "bottom",
     legend = legend_labels,  # Use the provided or default labels
     fill = cols,             # Colors matching the shocks
     horiz = TRUE,            # Horizontal layout
@@ -790,7 +790,7 @@ plot_historical_decomposition <- function(
     inset = c(0, -0.15),     # Adjust placement just below the plot
     cex = axis_font_size / 10  # Adjust the size of legend text to match other font sizes
   )
-  
+
   invisible(x)
 }
 
@@ -801,7 +801,7 @@ plot_historical_decomposition_bar <- function(
     main = "",
     xlab = "Time",
     ylab = "Response",
-    mar.multi = c(1, 5, 0, 0.2),  
+    mar.multi = c(1, 5, 0, 0.2),
     oma.multi = c(6, 0, 4, 0.2),
     bar_width = 2,  # Width of the bars
     grid_opacity = 0.5,  # Transparency for gridlines
@@ -816,32 +816,32 @@ plot_historical_decomposition_bar <- function(
     legend_position = "right",  # Position of the legend: "right" or "top"
     ...
 ) {
-  
+
   # Compute mean historical decompositions from the posterior draws
   hd_mean <- apply(x, 1:3, mean)
   N <- dim(hd_mean)[1]  # Number of variables
   T <- dim(hd_mean)[3]  # Time periods
-  
+
   # Set default for selected decompositions (plot all if not specified)
   if (is.null(selected_decompositions)) {
     selected_decompositions <- 1:N
   }
-  
+
   # Ensure valid selection of decompositions
   if (!all(selected_decompositions %in% 1:N)) {
     stop("Selected decompositions must be valid indices within the decomposition list.")
   }
-  
+
   # Set default colors if none are provided
   if (is.null(cols)) {
     cols <- RColorBrewer::brewer.pal(N, "Set3")  # Use Set3 color palette
   }
-  
+
   # Set default legend labels if none are provided
   if (is.null(legend_labels)) {
     legend_labels <- paste("Shock", 1:N)  # Default labels as "Shock 1", "Shock 2", etc.
   }
-  
+
   # Ensure a date vector or start_date is provided
   if (is.null(date_vector)) {
     if (is.null(start_date) || is.null(frequency)) {
@@ -850,14 +850,14 @@ plot_historical_decomposition_bar <- function(
     # Generate the date vector using start_date and frequency
     date_vector <- seq.Date(from = as.Date(start_date), by = paste0(12 / frequency, " months"), length.out = T)
   }
-  
+
   # Layout depending on the position of the legend
   if (legend_position == "right") {
     layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1))  # FEVD plot and legend side by side
   } else {
     layout(matrix(c(1, 2), nrow = 2), heights = c(4, 1))  # FEVD plot and legend on top
   }
-  
+
   # Set up plotting parameters for the bar plot
   oldpar <- graphics::par(
     mar = mar.multi,
@@ -865,32 +865,32 @@ plot_historical_decomposition_bar <- function(
     family = font_family  # Apply custom font family
   )
   on.exit(graphics::par(oldpar))
-  
+
   # Loop over each selected decomposition to plot it using stacked bar plot
   for (n in selected_decompositions) {
-    
+
     # Initialize cumulative sums for stacking bars
     cumulative_upper <- rep(0, T)
     cumulative_lower <- rep(0, T)
-    
+
     # Prepare bar plot data for each shock
     bar_data_pos <- matrix(0, nrow = N, ncol = T)
     bar_data_neg <- matrix(0, nrow = N, ncol = T)
-    
+
     # Calculate positive and negative contributions separately
     for (i in 1:N) {
       bar_data_pos[i, ] <- hd_mean[n, i, ] * (hd_mean[n, i, ] >= 0)
       bar_data_neg[i, ] <- hd_mean[n, i, ] * (hd_mean[n, i, ] < 0)
     }
-    
+
     # Calculate the range of cumulative sums
     cumulative_sum <- apply(bar_data_pos, 2, sum) + apply(bar_data_neg, 2, sum)
     ylim <- range(cumulative_sum)
-    
+
     # Add a buffer to both sides of the y-axis range
     ylim_buffer <- 0.6 * diff(ylim)  # 60% of the range
     ylim <- c(ylim[1] - ylim_buffer, ylim[2] + ylim_buffer)
-    
+
     # Plot the historical decomposition using stacked bar plot with black borders
     bar_x <- graphics::barplot(
       bar_data_pos,   # Data for the positive bars (stacked)
@@ -905,7 +905,7 @@ plot_historical_decomposition_bar <- function(
       axes = FALSE,  # Disable default axes
       width = bar_width  # Width of the bars
     )
-    
+
     # Add the negative part of the bars
     graphics::barplot(
       bar_data_neg,   # Data for the negative bars (stacked)
@@ -919,36 +919,36 @@ plot_historical_decomposition_bar <- function(
       add = TRUE,    # Add to the existing plot
       width = bar_width  # Width of the bars
     )
-    
+
     # Add the fitted values as a line over the bars
     fitted_values_for_variable <- apply(hd_mean[n, , ], 2, sum)
     lines(bar_x, fitted_values_for_variable, type = "l", col = "black", lwd = 2)
-    
+
     # Add gridlines
     abline(
       h = pretty(range(ylim)),
       col = adjustcolor("gray", alpha.f = grid_opacity),
       lty = "dotted"
     )
-    
+
     # Add horizontal line at zero
     graphics::abline(h = 0, col = "black", lty = 1)
-    
+
     # Add y-axis
     graphics::axis(2, cex.axis = axis_font_size / 10)
-    
+
     # Custom date labels every 6 months on the x-axis
     date_labels <- format(date_vector, "%Y-%m")
     every_6_months <- seq(1, length(date_labels), by = tick_freq)  # Indices for every 6 months
     axis(1, at = bar_x[every_6_months], labels = date_labels[every_6_months], cex.axis = axis_font_size / 10, las = 2)
   }
-  
+
   # Add main title
   graphics::mtext(main, side = 3, line = 2, outer = TRUE, cex = title_font_size / 10)  # Custom title size
-  
+
   # Add X-axis label only once
   graphics::mtext(xlab, side = 1, line = 3, outer = TRUE, cex = axis_font_size / 10)
-  
+
   # Switch to the legend panel in the layout
   graphics::par(mar = c(0, 0, 0, 0))  # Adjust margins for the legend space
   graphics::plot.new()  # Create a blank plot for the legend
@@ -959,7 +959,7 @@ plot_historical_decomposition_bar <- function(
     bty = "n",               # No box around the legend
     cex = axis_font_size / 10  # Adjust size of the legend text
   )
-  
+
   invisible(x)
 }
 
@@ -972,7 +972,7 @@ plot_fevd <- function(
     main = "Forecast Error Variance Decomposition",  # Main title
     xlab = "Horizon",          # X-axis label
     ylab = "Contribution (%)",  # Y-axis label
-    mar.multi = c(1, 5, 0, 0.2),  
+    mar.multi = c(1, 5, 0, 0.2),
     oma.multi = c(6, 0, 4, 0.2),    # Add outer margin space
     legend_mar = c(0, 0, 0, 0),     # Margins for the legend plot
     font_family = "Aptos",          # Custom font
@@ -983,41 +983,41 @@ plot_fevd <- function(
     tick_freq = 6,                  # Frequency for ticks on the x-axis
     ...
 ) {
-  
+
   # Compute mean FEVD from the posterior draws
   fevd <- apply(x, 1:3, mean)
   N <- dim(fevd)[1]  # Number of variables
   H <- dim(fevd)[3] - 1  # Horizon length
-  
+
   # Set default for selected variable (plot all if not specified)
   if (is.null(selected_variable)) {
     selected_variable <- 1:N
   }
-  
+
   # Ensure valid selection of the variable
   if (!all(selected_variable %in% 1:N)) {
     stop("Selected variable must be valid within the variable list.")
   }
-  
+
   # Set default colors if none are provided
   if (is.null(cols)) {
     cols <- RColorBrewer::brewer.pal(N, "Set3")  # Use Set3 color palette
   }
-  
+
   # Set default legend labels if none are provided
   if (is.null(legend_labels)) {
     legend_labels <- paste("Shock", 1:N)  # Default labels as "Shock 1", "Shock 2", etc.
   }
-  
+
   # Initialize the FEVD plotting data
   FEVD <- list()
   for (n in 1:N) {
     FEVD[[n]] <- rbind(rep(0, H + 1), apply(fevd[n, , ], 2, cumsum))
   }
-  
+
   # Set up a layout with two side-by-side plots (FEVD plot on the left, legend on the right)
   layout(matrix(c(1, 2), nrow = 1), widths = c(4, 1))  # Two parts: 4/5 for plots, 1/5 for legend
-  
+
   # Set up plotting parameters for the FEVD plots
   oldpar <- graphics::par(
     mar = mar.multi,
@@ -1025,10 +1025,10 @@ plot_fevd <- function(
     family = font_family  # Apply custom font family
   )
   on.exit(graphics::par(oldpar))
-  
+
   # Loop over each selected variable to plot it
   for (n in selected_variable) {
-    
+
     # Set up plot area with proper limits and labels
     graphics::plot(
       x = 0:H,
@@ -1040,29 +1040,29 @@ plot_fevd <- function(
       bty = "n",
       axes = FALSE
     )
-    
+
     # Draw the forecast error variance decomposition using polygons
     for (i in 1:N) {
       graphics::polygon(
-        c(0:H, H:0), 
-        c(FEVD[[n]][i, ], rev(FEVD[[n]][i + 1, ])), 
+        c(0:H, H:0),
+        c(FEVD[[n]][i, ], rev(FEVD[[n]][i + 1, ])),
         col = adjustcolor(cols[i], alpha.f = 0.8),  # Color for each shock with transparency
         border = cols[i]  # Border color for each polygon
       )
     }
-    
+
     # Add gridlines
     graphics::abline(
       h = pretty(c(0, 100)),
       col = adjustcolor("gray", alpha.f = grid_opacity),
       lty = "dotted"
     )
-    
+
     # Add horizontal and vertical axes
     graphics::axis(1, cex.axis = axis_font_size / 10)
     graphics::axis(2, c(0, 50, 100), c(0, 50, 100), cex.axis = axis_font_size / 10)
   }
-  
+
   # Switch to the legend panel in the layout
   graphics::par(mar = legend_mar)  # Set margins for the legend space
   graphics::plot.new()  # Create a blank plot for the legend
@@ -1073,11 +1073,11 @@ plot_fevd <- function(
     bty = "n",               # No box around the legend
     cex = axis_font_size / 10  # Adjust size of the legend text
   )
-  
+
   # Add the common main title and x-axis label
   graphics::mtext(main, side = 3, line = 1, outer = TRUE, cex = title_font_size / 10)
   graphics::mtext(xlab, side = 1, line = 3, outer = TRUE, cex = axis_font_size / 10)
-  
+
   invisible(x)
 }
 
@@ -1104,19 +1104,19 @@ plot_shocks <- function(
     add_grid = TRUE,
     ...
 ) {
-  
+
   N <- dim(x)[1]
-  
+
   # Default to all shocks if no specific indices are provided
   if (is.null(shocks)) {
     shocks <- 1:N
   }
-  
+
   # Use default shock names if none provided
   if (is.null(shock_names)) {
     shock_names <- paste("Shock", 1:N)
   }
-  
+
   # Handle time vector: use date_vector if provided, otherwise generate dates from start_date and frequency
   if (is.null(date_vector)) {
     if (!is.null(start_date) && !is.null(frequency)) {
@@ -1127,14 +1127,14 @@ plot_shocks <- function(
   } else if (length(date_vector) != dim(x)[2]) {
     stop("Length of date_vector must match the number of periods in the data.")
   }
-  
+
   # Set plot layout for the number of shocks selected
   set_plot_layout(nrow = length(shocks), ncol = 1, mar.multi = mar.multi, oma.multi = oma.multi, font_family = font_family)
-  
+
   # Loop through each selected shock
   for (i in seq_along(shocks)) {
     n <- shocks[i]
-    
+
     # Use custom_plot_ribbon to plot the ribbons for each selected shock
     custom_plot_ribbon(
       draws = x[n,,],
@@ -1155,24 +1155,24 @@ plot_shocks <- function(
       add = FALSE,  # Create a new plot
       ...
     )
-    
+
     # Optionally add gridlines
     if (add_grid) {
       add_custom_grid(value_range = range(x[n,,]), time_range = date_vector, grid_opacity = grid_opacity)
     }
-    
+
     # Add y-axis labels and zero line
     draw_plot_annotations(n, axis_font_size, variable_names = shock_names[n], add_title = TRUE)
-    
+
     # Add the x-axis with date labels (only for the last plot)
     if (i == length(shocks)) {
       axis.Date(1, at = seq(from = min(date_vector), to = max(date_vector), by = "year"), format = "%Y", cex.axis = axis_font_size / 10)
     }
   }
-  
+
   # Add the main title and x-axis label
   graphics::mtext(main, side = 3, line = 2, outer = TRUE, cex = title_font_size / 10)
   graphics::mtext(xlab, side = 1, line = 3, outer = TRUE, cex = axis_font_size / 10)
-  
+
   invisible(x)
 }

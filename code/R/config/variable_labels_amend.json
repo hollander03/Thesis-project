@@ -2,8 +2,8 @@
 
   "gdp_yoy": ["GDP Growth (YoY)"],
   "inflation": ["Inflation Rate"],
-  "M3": ["Money Supply"],
   "commodity": ["Commodity Index"],
+  "M3": ["Money Supply"],
   "bank_rate": ["Repo Rate"]
 
 
